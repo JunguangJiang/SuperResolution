@@ -1,17 +1,21 @@
 """
 Data Pre-processing
 
-preprocessing.py does the following work:
-    1. extract the zip files
-    2. convert y4m file to bmp files
-
 Usage:
+
+1. Given a json file, then download the zip file (the OS should install wget first)
+    python preprocess.py download [json_file] [target_dir]
+
+2. Extract the zip files and convert y4m file to bmp files (the OS should install ffmpeg first)
+    python preprocess.py extract [source_dir] [target_dir]
 
 """
 import os
 import zipfile
 from tqdm import tqdm
 import shutil
+import json
+import sys
 
 
 def unzip(filename, new_dir):
@@ -57,6 +61,33 @@ def copy_dir_structure(source_root, target_root):
     return True
 
 
+def download_origin_data(json_file, root_dir):
+    """
+    download the zip files to the root_dir
+    :param json_file: a json file which has the following content
+    ```
+    { "train":{
+        "input":["", ...],
+        "label":["", ...]
+    }, ... }
+    ```
+    :param root_dir: the root dir where the zip files will be placed
+    :return:
+    """
+    os.makedirs(root_dir, exist_ok=True)
+    with open(json_file) as f:
+        json_obj = json.load(f)
+        for dir in json_obj.keys():
+            path = os.path.join(root_dir, dir)
+            os.makedirs(path, exist_ok=True)
+            for sub_dir in json_obj[dir].keys():
+                sub_path = os.path.join(path, sub_dir)
+                os.makedirs(sub_path, exist_ok=True)
+                for url in json_obj[dir][sub_dir]:
+                    print("Download {} to {}".format(url, sub_path))
+                    os.system("wget -P {} {}".format(sub_path, url))
+
+
 def make_data_set(source_dir, target_dir):
     """
     construct a data set from source_dir
@@ -81,4 +112,17 @@ def make_data_set(source_dir, target_dir):
 
 
 if __name__ == '__main__':
-    make_data_set("data", "new_data")
+    if len(sys.argv) < 4:
+        print(__doc__)
+    else:
+        if sys.argv[1] == "download":
+            json_file = sys.argv[2]
+            target_dir = sys.argv[3]
+            download_origin_data(json_file, target_dir)
+        elif sys.argv[1] == "extract":
+            source_dir = sys.argv[2]
+            target_dir = sys.argv[3]
+            make_data_set(source_dir, target_dir)
+        else:
+            print(__doc__)
+
