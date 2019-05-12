@@ -33,14 +33,25 @@ def unzip(filename, new_dir):
 
 def y4m_2_bmp(y4m_dir, y4m_file, bmp_files_dir):
     """
-    convert a y4m_file to bmp files into a certain directory
+    convert a y4m file to bmp files into a certain directory
     :param y4m_dir: the dir name of the y4m file
     :param y4m_file: the file name of the y4m file
     :param bmp_files_dir: the directory where the bmp files should be placed
     :return:
     """
-    pattern = os.path.join(bmp_files_dir, y4m_file.split(".")[0] + "_l%3d.bmp")
+    pattern = os.path.join(bmp_files_dir, y4m_file.split(".")[0] + "_%3d.bmp")
     os.system("ffmpeg -i {} -vsync 0 {} -y".format(os.path.join(y4m_dir, y4m_file), pattern))
+
+
+def bmp_2_y4m(bmp_files_dir, bmp_file_prefix, y4m_dir):
+    """
+    convert bmp files to a y4m file
+    :param bmp_files_dir: the dir name of the bmp files
+    :param bmp_file_prefix: the prefix of the bmp file, such as `Youku_00099_l_l`
+    :param y4m_dir: the directory where the y4m file should be placed
+    :return:
+    """
+    os.system("ffmpeg -i {}_%3d.bmp  -pix_fmt yuv420p  -vsync 0 {}.y4m -y".format(os.path.join(bmp_files_dir, bmp_file_prefix), os.path.join(y4m_dir, bmp_file_prefix)))
 
 
 def copy_dir_structure(source_root, target_root):
