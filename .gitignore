@@ -117,3 +117,9 @@ new_data/
 temp/
 .idea/
 .DS_Store
+*.aux
+*.bbl
+*.blg
+*.out
+*.pdf
+*.gz

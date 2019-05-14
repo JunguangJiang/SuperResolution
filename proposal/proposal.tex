@@ -36,7 +36,9 @@
 % authors names on the first line, and the last on the second line, try using
 % \AND instead of \And before the third author name.
 
-\author{%
+\author{
+	叶葳蕤、吴海旭、江俊广\\
+	%
 %  David S.~Hippocampus\thanks{Use footnote for providing further information
 %    about author (webpage, alternative address)---\emph{not} for acknowledging
 %    funding agencies.} \\
@@ -73,11 +75,14 @@
 \maketitle
 
 \section{Problem Background}
-超分辨率(super-resolution, SR)问题希望从低分辨率多媒体数据重建出相应的高分辨率数据。本次比赛的场景为视频超分辨率问题，恢复降质视频本身的内容，提高视频的清晰度。
+超分辨率(super-resolution, SR)问题希望从低分辨率多媒体数据重建出相应的高分辨率数据。本次比赛的场景为视频超分辨率问题，恢复降质视频本身的内容，提高视频的清晰度。
 
-随着视频行业进入“超高清时代”，许多硬件设备已经支持超高分辨率媒体，却缺乏对应的高分辨率视频资源。视频超分辨率技术可以用来提升早期胶片或者用户自媒体视频的质量和清晰度，满足用户对于高分辨率媒体资源的需求。
 
-超分辨率技术在图像、视频以及高维数据上均得到应用。基于深度学习的 SR 方法，主要是基于卷积神经网络（CNN）实现。在本次比赛中，处理视频数据，会存在以下挑战。
+随着视频行业进入“超高清时代”，许多硬件设备已经支持超高分辨率媒体，却缺乏对应的高分辨率视频资源。视频超分辨率技术可以用来提升早期胶片或者用户自媒体视频的质量和清晰度，满足用户对于高分辨率媒体资源的需求。
+
+
+超分辨率技术在图像、视频以及高维数据上均得到应用。基于深度学习的 SR 方法，主要是基于卷积神经网络（CNN）实现。在本次比赛中，处理视频数据，会存在以下挑战。
+
 
 \paragraph{输出分辨率限制} 应用 CNN 的 SR 方案中，运算量会随着输出分辨率的大小而增加。
 \paragraph{时序特征应用} 视频数据存在时序特征，如果同时处理多帧数据，运动可能会造成部分区域内容的剧烈变化，所以需要更加好的时序特征提取方式。
