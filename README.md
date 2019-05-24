@@ -3,7 +3,7 @@
 1. 服务器用户名jiangjunguang，密码jiangjunguang。代码放在/workspace/SuperResolution/src下。
 2. 数据集已经全部转成图片放置于114服务器的/data/Youku_SR_video/image目录下。也可以在代码路径下通过YoukuDataset/image进行访问。
 3. 已使用conda配置好python环境，使用方法：source activate Youku。
-4. 代码在https://github.com/subeeshvasu/2018_subeesh_epsr_eccvw 和 https://github.com/thstkdgus35/EDSR-PyTorch的基础上进行了些许修改。后者的实现更加完整，但是由于时间比较早，和当前的pytorch版本不太兼容。
+4. 在https://github.com/thstkdgus35/EDSR-PyTorch的基础上进行了些许修改。pytorch需要更新到1.1.0
 
 ### Code Structure
 - main.py程序的入口，option.py和template.py都是用于命令行参数解析的，无需阅读
