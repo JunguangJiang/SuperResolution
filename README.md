@@ -11,7 +11,7 @@
 - trainer.py 训练器
 - data文件夹 Dataset子类，我们只需要使用youku.py(可能有bug)进行训练
 - model文件夹 不同的模型实现（重点阅读）
-- loss文件夹 来自https://github.com/thstkdgus35/EDSR-PyTorch EDSR对于GAN的实现 （尚未集成进来）
+- loss文件夹 不同损失函数（包括GAN）的实现
 - preprocess 数据下载、格式转换。（无需阅读）
 
 ### Further work
