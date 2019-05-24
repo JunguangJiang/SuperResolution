@@ -1,40 +1,33 @@
 import os
 import math
 from decimal import Decimal
-
 import utility
-
 import torch
-from torch.autograd import Variable
+import torch.nn.utils as utils
 from tqdm import tqdm
 
 
 class Trainer():
     def __init__(self, args, loader, my_model, my_loss, ckp):
         self.args = args
-        self.scale = args.scale
+        self.scale = args.scale[0]  # 我们只支持一种放大尺度的训练
 
         self.ckp = ckp
-        self.loader_train = loader.loader_train
-        self.loader_test = loader.loader_test
+        self.loader_train = loader.loader_train  # 训练数据加载器
+        self.loader_test = loader.loader_test  # 测试数据加载器
         self.model = my_model
         self.loss = my_loss
         self.optimizer = utility.make_optimizer(args, self.model)
-        self.scheduler = utility.make_scheduler(args, self.optimizer)
 
-        if self.args.load != '':
-            self.optimizer.load_state_dict(
-                torch.load(os.path.join(ckp.dir, 'optimizer.pt'))
-            )
-            for _ in range(len(ckp.log)): self.scheduler.step()
+        if self.args.load != '':  # 恢复之前的训练
+            self.optimizer.load(ckp.dir, epoch=len(ckp.log))
 
         self.error_last = 1e8
 
     def train(self):
-        self.scheduler.step()
         self.loss.step()
-        epoch = self.scheduler.last_epoch + 1
-        lr = self.scheduler.get_lr()[0]
+        epoch = self.optimizer.get_last_epoch() + 1
+        lr = self.optimizer.get_lr()
 
         self.ckp.write_log(
             '[Epoch {}]\tLearning rate: {:.2e}'.format(epoch, Decimal(lr))
@@ -44,20 +37,20 @@ class Trainer():
 
         timer_data, timer_model = utility.timer(), utility.timer()
         for batch, (lr, hr, _) in enumerate(self.loader_train):
-            lr, hr = self.prepare([lr, hr])
+            lr, hr = self.prepare(lr, hr)
             timer_data.hold()
             timer_model.tic()
 
             self.optimizer.zero_grad()
             sr = self.model(lr, self.scale)
             loss = self.loss(sr, hr)
-            if loss.item() < self.args.skip_threshold * self.error_last:
-                loss.backward()
-                self.optimizer.step()
-            else:
-                print('Skip this batch {}! (Loss: {})'.format(
-                    batch + 1, loss.item()
-                ))
+            loss.backward()
+            if self.args.gclip > 0:
+                utils.clip_grad_value_(
+                    self.model.parameters(),
+                    self.args.gclip
+                )
+            self.optimizer.step()
 
             timer_model.hold()
 
@@ -70,73 +63,85 @@ class Trainer():
                     timer_data.release()))
 
             timer_data.tic()
+            if batch > 4:
+                break
 
         self.loss.end_log(len(self.loader_train))
         self.error_last = self.loss.log[-1, -1]
+        self.optimizer.schedule()
 
     def test(self):
-        epoch = self.scheduler.last_epoch + 1
+        torch.set_grad_enabled(False)
+
+        epoch = self.optimizer.get_last_epoch() + 1
+        print("test epoch", epoch)
         self.ckp.write_log('\nEvaluation:')
-        self.ckp.add_log(torch.zeros(1, self.scale))
+        self.ckp.add_log(
+            torch.zeros(1)
+        )
         self.model.eval()
 
         timer_test = utility.timer()
-        with torch.no_grad():
-            eval_acc = 0
-            tqdm_test = tqdm(self.loader_test, ncols=80)
-            for idx_img, (lr, hr, filename) in enumerate(tqdm_test):
-                filename = filename[0]
-                no_eval = (hr.nelement() == 1)
-                if not no_eval:
-                    lr, hr = self.prepare([lr, hr])
-                else:
-                    lr = self.prepare([lr])[0]
-                print(lr.shape)
-                sr = self.model(lr, self.scale)
-                sr = utility.quantize(sr, self.args.rgb_range)
+        if self.args.save_results: self.ckp.begin_background()
+        for idx_data, (lr, hr, filename) in enumerate(self.loader_test):
+            lr, hr = self.prepare(lr, hr)
+            sr = self.model(lr, self.scale)
+            sr = utility.quantize(sr, self.args.rgb_range)
 
-                save_list = [sr]
-                if not no_eval:
-                    eval_acc += utility.calc_psnr(
-                        sr, hr, self.scale, self.args.rgb_range,
-                        benchmark=self.loader_test.dataset.benchmark
-                    )
-                    save_list.extend([lr, hr])
+            save_list = [sr]
+            self.ckp.log[-1] += utility.calc_psnr(
+                sr, hr, self.scale, self.args.rgb_range, dataset=self.loader_test
+            )
+            if self.args.save_gt:
+                save_list.extend([lr, hr])
 
-                if self.args.save_results:
-                    self.ckp.save_results(filename, save_list, self.scale)
+            if self.args.save_results:
+                self.ckp.save_results(self.loader_test, filename[0], save_list, self.scale)
 
-                self.ckp.log[-1, 0] = eval_acc / len(self.loader_test)
-                best = self.ckp.log.max(0)
-                self.ckp.write_log(
-                    '[{} x{}]\tPSNR: {:.3f} (Best: {:.3f} @epoch {})'.format(
-                        self.args.data_test,
-                        self.scale,
-                        self.ckp.log[-1, 0],
-                        best[0][0],
-                        best[1][0] + 1
-                    )
-                )
+            if idx_data > 4:
+                break
+
+        self.ckp.log[-1] /= len(self.loader_test)
+        best = self.ckp.log.max(0)
+        self.ckp.write_log(
+            '[{} x{}]\tPSNR: {:.3f} (Best: {:.3f} @epoch {})'.format(
+                self.loader_test.dataset.name,
+                self.scale,
+                self.ckp.log[-1],
+                best[0],
+                best[1] + 1
+            )
+        )
+
+        self.ckp.write_log('Forward: {:.2f}s\n'.format(timer_test.toc()))
+        self.ckp.write_log('Saving...')
+
+        if self.args.save_results:
+            self.ckp.end_background()
+
+        if not self.args.test_only:
+            self.ckp.save(self, epoch, is_best=(best[1] + 1 == epoch))
 
         self.ckp.write_log(
-            'Total time: {:.2f}s\n'.format(timer_test.toc()), refresh=True
+            'Total: {:.2f}s\n'.format(timer_test.toc()), refresh=True
         )
-        if not self.args.test_only:
-            self.ckp.save(self, epoch, is_best=(best[1][0] + 1 == epoch))
 
-    def prepare(self, l, volatile=False):
-        device = torch.device('cpu' if self.args.cpu else 'cuda')
+        torch.set_grad_enabled(True)
+
+    def prepare(self, *args):
+        device = torch.device('cpu' if self.args.cpu else self.args.cuda)
         def _prepare(tensor):
             if self.args.precision == 'half': tensor = tensor.half()
             return tensor.to(device)
-           
-        return [_prepare(_l) for _l in l]
+
+        return [_prepare(a) for a in args]
 
     def terminate(self):
         if self.args.test_only:
             self.test()
             return True
         else:
-            epoch = self.scheduler.last_epoch + 1
+            epoch = self.optimizer.get_last_epoch() + 1
             return epoch >= self.args.epochs
+
 

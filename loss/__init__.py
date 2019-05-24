@@ -56,7 +56,7 @@ class Loss(nn.modules.loss._Loss):
 
         self.log = torch.Tensor()
 
-        device = torch.device('cpu' if args.cpu else 'cuda')
+        device = torch.device('cpu' if args.cpu else args.cuda)
         self.loss_module.to(device)
         if args.precision == 'half': self.loss_module.half()
         if not args.cpu and args.n_GPUs > 1:
@@ -64,10 +64,7 @@ class Loss(nn.modules.loss._Loss):
                 self.loss_module, range(args.n_GPUs)
             )
 
-        if args.load != '':
-            print("load", args.load)
-            print("ckp.dir", ckp.dir)
-            self.load(ckp.dir, cpu=args.cpu)
+        if args.load != '': self.load(ckp.dir, cpu=args.cpu)
 
     def forward(self, sr, hr):
         losses = []
