@@ -36,7 +36,7 @@ class Trainer():
         self.model.train()
 
         timer_data, timer_model = utility.timer(), utility.timer()
-        for batch, (lr, hr, _) in enumerate(self.loader_train):
+        for batch, (lr, hr, _) in enumerate(tqdm(self.loader_train)):
             lr, hr = self.prepare(lr, hr)
             timer_data.hold()
             timer_model.tic()
@@ -71,8 +71,7 @@ class Trainer():
     def test(self):
         torch.set_grad_enabled(False)
 
-        epoch = self.optimizer.get_last_epoch() + 1
-        print("test epoch", epoch)
+        epoch = self.optimizer.get_last_epoch()
         self.ckp.write_log('\nEvaluation:')
         self.ckp.add_log(
             torch.zeros(1)
@@ -81,7 +80,7 @@ class Trainer():
 
         timer_test = utility.timer()
         if self.args.save_results: self.ckp.begin_background()
-        for idx_data, (lr, hr, filename) in enumerate(self.loader_test):
+        for idx_data, (lr, hr, filename) in enumerate(tqdm(self.loader_test)):
             lr, hr = self.prepare(lr, hr)
             sr = self.model(lr, self.scale)
             sr = utility.quantize(sr, self.args.rgb_range)
@@ -99,10 +98,11 @@ class Trainer():
         self.ckp.log[-1] /= len(self.loader_test)
         best = self.ckp.log.max(0)
         self.ckp.write_log(
-            '[{} x{}]\tPSNR: {:.3f} (Best: {:.3f} @epoch {})'.format(
+            '[{} x{}]\tPSNR: {:.3f} @epoch{} (Best: {:.3f} @epoch {})'.format(
                 self.loader_test.dataset.name,
                 self.scale,
                 self.ckp.log[-1],
+                epoch,
                 best[0],
                 best[1] + 1
             )

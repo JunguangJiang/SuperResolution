@@ -9,6 +9,8 @@ Usage:
 2. Extract the zip files and convert y4m file to bmp files (the OS should install ffmpeg first)
     python preprocess.py extract [source_dir] [target_dir]
 
+3. Convert all the bmp files in a directory to y4m files
+    python preprocess.py extract [source_dir] [target_dir]
 """
 import os
 import zipfile

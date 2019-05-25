@@ -142,8 +142,11 @@ parser.add_argument('--save_results', action='store_true',
                     help='save output results')
 parser.add_argument('--save_gt', action='store_true',
                     help='save low-resolution and high-resolution images together')
+parser.add_argument('--results_dir', type=str, default='',
+                    help='the dir where to put the result images')
 parser.add_argument('--cuda', type=str, default='cuda:6',
                     help='the cuda number')
+
 
 args = parser.parse_args()
 template.set_template(args)
