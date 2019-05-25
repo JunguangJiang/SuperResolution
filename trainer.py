@@ -63,8 +63,6 @@ class Trainer():
                     timer_data.release()))
 
             timer_data.tic()
-            if batch > 4:
-                break
 
         self.loss.end_log(len(self.loader_train))
         self.error_last = self.loss.log[-1, -1]
@@ -97,9 +95,6 @@ class Trainer():
 
             if self.args.save_results:
                 self.ckp.save_results(self.loader_test, filename[0], save_list, self.scale)
-
-            if idx_data > 4:
-                break
 
         self.ckp.log[-1] /= len(self.loader_test)
         best = self.ckp.log.max(0)
