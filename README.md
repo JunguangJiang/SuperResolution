@@ -23,29 +23,8 @@
 
 ## Usage
 #### Training
-```bash
-python main.py --help //查看所有的参数
+使用方法见https://shimo.im/docs/omS9rb73rqQ3CH9x
 
-//使用已经训练好的模型对../test下的图片进行测试,输出在experiment/test/results下
-python main.py --data_test Demo --scale 4 --n_resblocks 32 --n_feats 256 --res_scale 0.1 --pre_train ../experiment/epsr1_model.pt --test_only --save_results
-
-//数据集文件在YoukuDataset/image下,训练集名称为Youku,验证集名称为Youku,进行模型完整的训练
-python main.py --data_train Youku --dir_data YoukuDataset/image --data_train Youku --data_test Youku --epochs 10 --scale 4 --n_resblocks 32 --n_feats 256 --res_scale 0.1 --loss 1*MSE --print_every 1 --load "" --test_every 10 --cuda cuda:7
-
-//数据集文件在YoukuDataset/image下,训练集名称为Youku,验证集名称为Youku,进行代码的测试(YoukuDataset/small下的图片数量比较少，可以较快地测试程序的bug)
-python main.py --data_train Youku --dir_data YoukuDataset/small --data_train Youku --data_test Youku --epochs 10 --scale 4 --n_resblocks 32 --n_feats 256 --res_scale 0.1 --loss 1*MSE --print_every 1 --load "" --test_every 10 --cuda cuda:7
-```
-常用参数说明
-- dir_data 数据集的文件夹位置
-- epochs 训练次数
-- loss 1*MSE+0.5*GAN 损失函数及其比重
-- print_every 训练阶段打印损失函数的频率
-- load 假如之前有训练记录，可以用load指定路径来恢复训练
-- save 指定训练保存的路径，默认为test(由于根目录是experiment，那么保存在experiment/test下)
-- test_every 每隔多少个batch进行一次测试
-- cuda 指定cuda的版本
-
-损失函数和PSNR的可视化结果均在save指定的文件夹下。
 
 ## Environment
 * Python (Tested with 3.6)

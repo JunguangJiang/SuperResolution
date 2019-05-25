@@ -157,7 +157,6 @@ class checkpoint():
 
     def save_results(self, dataset, filename, save_list, scale):
         if self.args.save_results:
-            filename = filename.strip("_l")
             if self.args.results_dir == "":
                 filename = self.get_path(
                     'results-{}'.format(dataset.dataset.name),
@@ -166,11 +165,11 @@ class checkpoint():
             else:
                 filename = os.path.join(self.args.results_dir, filename)
 
-            postfix = ('h_Res', 'l', 'h_GT')
+            postfix = ('_h_Res', '_l', '_h_GT')
             for v, p in zip(save_list, postfix):
                 normalized = v[0].mul(255 / self.args.rgb_range)
                 tensor_cpu = normalized.byte().permute(1, 2, 0).cpu()
-                self.queue.put(('{}_{}.bmp'.format(filename, p), tensor_cpu))
+                self.queue.put(('{}.bmp'.format(filename.replace('_l', p)), tensor_cpu))
 
 def quantize(img, rgb_range):
     pixel_range = 255 / rgb_range

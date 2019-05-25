@@ -9,8 +9,8 @@ Usage:
 2. Extract the zip files and convert y4m file to bmp files (the OS should install ffmpeg first)
     python preprocess.py extract [source_dir] [target_dir]
 
-3. Convert all the bmp files in a directory to y4m files
-    python preprocess.py extract [source_dir] [target_dir]
+3. Convert all the bmp files in a directory to y4m files in another directory
+    python preprocess.py pack [source_dir] [target_dir]
 """
 import os
 import zipfile
@@ -18,6 +18,7 @@ from tqdm import tqdm
 import shutil
 import json
 import sys
+import glob
 
 
 def unzip(filename, new_dir):
@@ -124,6 +125,23 @@ def make_data_set(source_dir, target_dir):
                 shutil.rmtree(temp_dir)
 
 
+def pack(source_dir, target_dir):
+    """
+    Convert all the bmp files in source_dir to y4m files
+    :param source_dir:
+    :param target_dir: the dir where y4m files should be placed
+    :return:
+    """
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+    os.mkdir(target_dir)
+    names_sr = sorted(
+        glob.glob(os.path.join(source_dir, '*_001.bmp'))
+    )
+    for name in tqdm(names_sr):
+        bmp_2_y4m(source_dir, os.path.basename(name).strip("_001.bmp"), target_dir)
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print(__doc__)
@@ -136,6 +154,10 @@ if __name__ == '__main__':
             source_dir = sys.argv[2]
             target_dir = sys.argv[3]
             make_data_set(source_dir, target_dir)
+        elif sys.argv[1] == "pack":
+            source_dir = sys.argv[2]
+            target_dir = sys.argv[3]
+            pack(source_dir, target_dir)
         else:
             print(__doc__)
 
