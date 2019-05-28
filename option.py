@@ -156,8 +156,8 @@ parser.add_argument('--res_scale_factor', type=float, default=0.6,
                     help='the decrease factor of res_scale')
 parser.add_argument('--n_rirblocks', type=int, default=5,
                     help='the number of RIR blocks')
-parser.add_argument('--ewc', type=bool, default=False,
-                    help='end with conv: whether MRIRSR has a conv before subpixel layer')
+# parser.add_argument('--ewc', type=bool, default=False,
+#                     help='end with conv: whether MRIRSR has a conv before subpixel layer')
 parser.add_argument('--cwo', type=bool, default=False,
                     help="connect with origin image: whether RIRBlock always connect with origin image")
 

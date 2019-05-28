@@ -1,6 +1,5 @@
 import os
 import math
-from preprocess.preprocess import y4m_2_bmp, bmp_2_y4m
 
 import utility
 from data import common

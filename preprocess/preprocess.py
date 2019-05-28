@@ -7,10 +7,17 @@ Usage:
     python preprocess.py download [json_file] [target_dir]
 
 2. Extract the zip files and convert y4m file to bmp files (the OS should install ffmpeg first)
-    python preprocess.py extract [source_dir] [target_dir]
+    python preprocess.py zip2bmp [source_dir] [target_dir]
 
 3. Convert all the bmp files in a directory to y4m files in another directory
-    python preprocess.py pack [source_dir] [target_dir]
+    python preprocess.py bmp2y4m [source_dir] [target_dir]
+
+4. Convert all the y4m files in a directory to yuv files in another directory
+    python preprocess.py y4m2yuv [source_dir] [target_dir]
+
+5. Convert all the y4m files to the final zip files
+    python preprocess.py zip [source_dir] [target_dir]
+
 """
 import os
 import zipfile
@@ -19,6 +26,9 @@ import shutil
 import json
 import sys
 import glob
+import cv2
+import numpy as np
+
 
 
 def unzip(filename, new_dir):
@@ -55,6 +65,20 @@ def bmp_2_y4m(bmp_files_dir, bmp_file_prefix, y4m_dir):
     :return:
     """
     os.system("ffmpeg -i {}_%3d.bmp  -pix_fmt yuv420p  -vsync 0 {}.y4m -y".format(os.path.join(bmp_files_dir, bmp_file_prefix), os.path.join(y4m_dir, bmp_file_prefix)))
+
+
+def y4ms_2_yuvs(y4m_dir, yuv_dir):
+    """convert all the y4m files in y4m_dir to yuv files in yuv_dir"""
+    if os.path.exists(yuv_dir):
+        shutil.rmtree(yuv_dir)
+    os.mkdir(yuv_dir)
+    names_sr = sorted(
+        glob.glob(os.path.join(y4m_dir, '*.y4m'))
+    )
+    for name in tqdm(names_sr):
+        base_name = os.path.basename(name).replace('.y4m', '.yuv')
+        command = "ffmpeg -i {} -vsync 0 {}  -y".format(name, os.path.join(yuv_dir, base_name))
+        os.system(command)
 
 
 def copy_dir_structure(source_root, target_root):
@@ -102,7 +126,7 @@ def download_origin_data(json_file, root_dir):
                     os.system("wget -P {} {}".format(sub_path, url))
 
 
-def make_data_set(source_dir, target_dir):
+def zips_2_bmps(source_dir, target_dir):
     """
     construct a YoukuDataSet set from source_dir
     :param source_dir: directory where the source zip files are placed
@@ -125,9 +149,9 @@ def make_data_set(source_dir, target_dir):
                 shutil.rmtree(temp_dir)
 
 
-def pack(source_dir, target_dir):
+def bmps_2_y4ms(source_dir, target_dir, ratio=1):
     """
-    Convert all the bmp files in source_dir to y4m files
+    Convert part of the bmp files in source_dir to y4m files
     :param source_dir:
     :param target_dir: the dir where y4m files should be placed
     :return:
@@ -138,8 +162,34 @@ def pack(source_dir, target_dir):
     names_sr = sorted(
         glob.glob(os.path.join(source_dir, '*_001.bmp'))
     )
+    names_sr = names_sr[0: int(ratio * len(names_sr))]
     for name in tqdm(names_sr):
         bmp_2_y4m(source_dir, os.path.basename(name).strip("_001.bmp"), target_dir)
+
+
+def create_final_result(source_dir, target_dir, ratio=0.1):
+    """
+    sample from the source_dir and create the final y4m files in target_dir
+    :param source_dir:
+    :param target_dir:
+    :param ratio: top ratio will be reserved, while others will be sub-sample by 1/25.
+    :return:
+    """
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+    os.mkdir(target_dir)
+    names_sr = sorted(
+        glob.glob(os.path.join(source_dir, '*.y4m'))
+    )
+    total_size = len(names_sr)
+    reserved_size = int(total_size * ratio)
+    for i in tqdm(range(reserved_size)):
+        shutil.copy(names_sr[i], names_sr[i].replace(source_dir, target_dir))
+    for i in tqdm(range(reserved_size, total_size)):
+        os.system("ffmpeg -i {} -vf select='not(mod(n\,25))' -vsync 0  -y {}".format(
+            names_sr[i],
+            names_sr[i].replace(source_dir, target_dir).replace("_h_Res.y4m", "_h_Sub25_Res.y4m")
+        ))
 
 
 if __name__ == '__main__':
@@ -150,14 +200,17 @@ if __name__ == '__main__':
             json_file = sys.argv[2]
             target_dir = sys.argv[3]
             download_origin_data(json_file, target_dir)
-        elif sys.argv[1] == "extract":
-            source_dir = sys.argv[2]
-            target_dir = sys.argv[3]
-            make_data_set(source_dir, target_dir)
-        elif sys.argv[1] == "pack":
-            source_dir = sys.argv[2]
-            target_dir = sys.argv[3]
-            pack(source_dir, target_dir)
         else:
-            print(__doc__)
+            source_dir = sys.argv[2]
+            target_dir = sys.argv[3]
+            if sys.argv[1] == "zip2bmp":
+                zips_2_bmps(source_dir, target_dir)
+            elif sys.argv[1] == "bmp2y4m":
+                bmps_2_y4ms(source_dir, target_dir)
+            elif sys.argv[1] == 'y4m2yuv':
+                y4ms_2_yuvs(source_dir, target_dir)
+            elif sys.argv[1] == "zip":
+                create_final_result(source_dir, target_dir)
+            else:
+                print(__doc__)
 
