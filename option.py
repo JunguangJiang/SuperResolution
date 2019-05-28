@@ -144,8 +144,22 @@ parser.add_argument('--save_gt', action='store_true',
                     help='save low-resolution and high-resolution images together')
 parser.add_argument('--results_dir', type=str, default='',
                     help='the dir where to put the result images')
+
+
 parser.add_argument('--cuda', type=str, default='cuda:6',
                     help='the cuda number')
+parser.add_argument('--ms_factor', type=float, default=0.85,
+                    help='MultiStepLR factor')
+parser.add_argument('--ms_patience', type=int, default=10,
+                    help='MultiStepLR patience')
+parser.add_argument('--res_scale_factor', type=float, default=0.6,
+                    help='the decrease factor of res_scale')
+parser.add_argument('--n_rirblocks', type=int, default=5,
+                    help='the number of RIR blocks')
+parser.add_argument('--ewc', type=bool, default=False,
+                    help='end with conv: whether MRIRSR has a conv before subpixel layer')
+parser.add_argument('--cwo', type=bool, default=False,
+                    help="connect with origin image: whether RIRBlock always connect with origin image")
 
 
 args = parser.parse_args()
