@@ -36,6 +36,7 @@ class Trainer():
         self.model.train()
 
         timer_data, timer_model = utility.timer(), utility.timer()
+        batch_loss = 0
         for batch, (lr, hr, _) in enumerate(tqdm(self.loader_train)):
             lr, hr = self.prepare(lr, hr)
             timer_data.hold()
@@ -44,6 +45,7 @@ class Trainer():
             self.optimizer.zero_grad()
             sr = self.model(lr, self.scale)
             loss = self.loss(sr, hr)
+            batch_loss += loss
             loss.backward()
             if self.args.gclip > 0:
                 utils.clip_grad_value_(
@@ -66,12 +68,12 @@ class Trainer():
 
         self.loss.end_log(len(self.loader_train))
         self.error_last = self.loss.log[-1, -1]
-        self.optimizer.schedule()
+        # self.optimizer.schedule(batch_loss/len(self.loader_train))
 
     def test(self):
         torch.set_grad_enabled(False)
 
-        epoch = self.optimizer.get_last_epoch()
+        epoch = self.optimizer.get_last_epoch() + 1
         self.ckp.write_log('\nEvaluation:')
         self.ckp.add_log(
             torch.zeros(1)
@@ -107,6 +109,7 @@ class Trainer():
                 best[1] + 1
             )
         )
+        self.optimizer.schedule(self.ckp.log[-1])
 
         self.ckp.write_log('Forward: {:.2f}s\n'.format(timer_test.toc()))
         self.ckp.write_log('Saving...')

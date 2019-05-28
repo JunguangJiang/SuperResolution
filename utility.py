@@ -212,10 +212,23 @@ def make_optimizer(args, target):
         optimizer_class = optim.RMSprop
         kwargs_optimizer['eps'] = args.epsilon
 
+
     # scheduler
-    milestones = list(map(lambda x: int(x), args.decay.split('-')))
-    kwargs_scheduler = {'milestones': milestones, 'gamma': args.gamma}
-    scheduler_class = lrs.MultiStepLR
+    # milestones = list(map(lambda x: int(x), args.decay.split('-')))
+    # kwargs_scheduler = {'milestones': milestones, 'gamma': args.gamma}
+    # scheduler_class = lrs.MultiStepLR
+    kwargs_scheduler = {
+        'mode': "max",
+        'verbose': True,
+        'factor': args.ms_factor,
+        'patience': args.ms_patience,
+        'threshold': 1e-4,
+        'threshold_mode': 'rel',
+        'cooldown': 0,
+        'min_lr': 1e-8,
+        'eps': 1e-6
+    }
+    scheduler_class = optim.lr_scheduler.ReduceLROnPlateau
 
     class CustomOptimizer(optimizer_class):
         def __init__(self, *args, **kwargs):
@@ -229,21 +242,21 @@ def make_optimizer(args, target):
 
         def load(self, load_dir, epoch=1):
             self.load_state_dict(torch.load(self.get_dir(load_dir)))
-            if epoch > 1:
-                for _ in range(epoch): self.scheduler.step()
+            # if epoch > 1:
+            #     for _ in range(epoch): self.scheduler.step()
 
         def get_dir(self, dir_path):
             return os.path.join(dir_path, 'optimizer.pt')
 
-        def schedule(self):
-            self.scheduler.step()
+        def schedule(self, loss):
+            self.scheduler.step(loss)
 
         def get_lr(self):
-            return self.scheduler.get_lr()[0]
+            return self.state_dict().get('param_groups')[0].get('lr')
 
         def get_last_epoch(self):
             return self.scheduler.last_epoch + 1
-    
+
     optimizer = CustomOptimizer(trainable, **kwargs_optimizer)
     optimizer._register_scheduler(scheduler_class, **kwargs_scheduler)
     return optimizer
