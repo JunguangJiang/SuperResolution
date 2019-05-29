@@ -242,6 +242,7 @@ def make_optimizer(args, target):
 
         def load(self, load_dir, epoch=1):
             self.load_state_dict(torch.load(self.get_dir(load_dir)))
+            self.scheduler.last_epoch = epoch - 1
             # if epoch > 1:
             #     for _ in range(epoch): self.scheduler.step()
 
