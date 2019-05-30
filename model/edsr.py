@@ -22,7 +22,7 @@ class EDSR(nn.Module):
         n_feats = args.n_feats
         kernel_size = 3 
         scale = args.scale[0]
-        act = nn.ReLU(True)
+        act = nn.LeakyReLU(True)
         # self.url = url['r{}f{}x{}'.format(n_resblocks, n_feats, scale)]
         self.sub_mean = common.MeanShift(args.rgb_range)
         self.add_mean = common.MeanShift(args.rgb_range, sign=1)
