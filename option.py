@@ -162,6 +162,11 @@ parser.add_argument('--n_dedsrblocks', type=int, default=1,
 #                     help='end with conv: whether MRIRSR has a conv before subpixel layer')
 parser.add_argument('--cwo', type=bool, default=False,
                     help="connect with origin image: whether RIRBlock always connect with origin image")
+parser.add_argument('--ema_decay', type=float, default=0.9)
+
+parser.add_argument('--consistency', type=int, default=4)
+
+parser.add_argument('--consistency_rampup', type=int, default=30)
 
 
 args = parser.parse_args()

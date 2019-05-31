@@ -1,28 +1,39 @@
 import os
 import math
 from decimal import Decimal
+
+import logger
 import utility
 import torch
 import torch.nn.utils as utils
+import torch.nn as nn
 from tqdm import tqdm
 
 
 class Trainer():
-    def __init__(self, args, loader, my_model, my_loss, ckp):
+    def __init__(self, args, loader, model, ema_model, my_loss, ckp):
         self.args = args
         self.scale = args.scale[0]  # 我们只支持一种放大尺度的训练
 
         self.ckp = ckp
         self.loader_train = loader.loader_train  # 训练数据加载器
         self.loader_test = loader.loader_test  # 测试数据加载器
-        self.model = my_model
+        self.model = model
+        self.ema_model = ema_model
+        for param in ema_model.parameters():
+            param.detach_()
+
         self.loss = my_loss
+        self.consistency_criterion = nn.MSELoss()
         self.optimizer = utility.make_optimizer(args, self.model)
 
         if self.args.load != '':  # 恢复之前的训练
             self.optimizer.load(ckp.dir, epoch=len(ckp.log))
 
         self.error_last = 1e8
+        self.iter = 0
+
+        self.vis = logger.Logger('gg', 'vis/gg1')
 
     def train(self):
         self.loss.step()
@@ -42,9 +53,27 @@ class Trainer():
             timer_data.hold()
             timer_model.tic()
 
+            self.iter += 1
+
             self.optimizer.zero_grad()
             sr = self.model(lr, self.scale)
+
+            sr_ema = self.ema_model(lr, self.scale)
+            ema_alpha = self.update_ema_params(self.args.ema_decay)
+
+            consistency_weight = self.get_current_consistency_weight()
+            consistency_loss = self.consistency_criterion(sr, sr_ema) * consistency_weight
+
+
             loss = self.loss(sr, hr)
+
+            self.vis.add_scalar('loss', loss)
+            self.vis.add_scalar('consist loss', consistency_loss)
+            self.vis.add_scalar('consistency_weight', consistency_weight)
+            self.vis.add_scalar('alpha', ema_alpha)
+            self.vis.step(1)
+
+            loss += consistency_loss
             batch_loss += loss
             loss.backward()
             if self.args.gclip > 0:
@@ -63,6 +92,7 @@ class Trainer():
                     self.loss.display_loss(batch),
                     timer_model.release(),
                     timer_data.release()))
+                print("alpha: ", ema_alpha)
 
             timer_data.tic()
 
@@ -78,13 +108,13 @@ class Trainer():
         self.ckp.add_log(
             torch.zeros(1)
         )
-        self.model.eval()
+        self.ema_model.eval()
 
         timer_test = utility.timer()
         if self.args.save_results: self.ckp.begin_background()
         for idx_data, (lr, hr, filename) in enumerate(tqdm(self.loader_test)):
             lr, hr = self.prepare(lr, hr)
-            sr = self.model(lr, self.scale)
+            sr = self.ema_model(lr, self.scale)
             sr = utility.quantize(sr, self.args.rgb_range)
 
             save_list = [sr]
@@ -142,4 +172,12 @@ class Trainer():
             epoch = self.optimizer.get_last_epoch() + 1
             return epoch >= self.args.epochs
 
+    def update_ema_params(self, alpha):
+        # Use the true average until the exponential average is more correct
+        alpha = min(1 - 1 / (self.iter + 1), alpha)
+        for ema_param, param in zip(self.ema_model.parameters(), self.model.parameters()):
+            ema_param.data.mul_(alpha).add_(1 - alpha, param.data)
+        return alpha
 
+    def get_current_consistency_weight(self):
+        return min(self.args.consistency * utility.sigmoid_rampup(self.iter, self.args.consistency_rampup), 1)
