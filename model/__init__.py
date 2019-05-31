@@ -29,6 +29,7 @@ class Model(nn.Module):
 
         self.load(
             ckp.get_path('model'),
+            args,
             pre_train=args.pre_train,
             resume=args.resume,
             cpu=args.cpu
@@ -69,11 +70,12 @@ class Model(nn.Module):
         for s in save_dirs:
             torch.save(self.model.state_dict(), s)
 
-    def load(self, apath, pre_train='', resume=-1, cpu=False):
+    def load(self, apath, args, pre_train='', resume=-1, cpu=False):
         load_from = None
-        kwargs = {}
         if cpu:
             kwargs = {'map_location': lambda storage, loc: storage}
+        else:
+            kwargs = {'map_location': args.cuda}
 
         if resume == -1:
             load_from = torch.load(

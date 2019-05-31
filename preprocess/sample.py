@@ -28,7 +28,6 @@ def sample_dataset(src, dst, ratio):
         shutil.rmtree(dst_label_dir)
     os.mkdir(dst_input_dir)
     os.mkdir(dst_label_dir)
-    print(os.path.join(src, 'input', '*' + '.bmp'))
     input_file_names = sorted(
         glob.glob(os.path.join(src, 'input', '*' + '.bmp'))
     )
@@ -47,6 +46,6 @@ def sample_dataset(src, dst, ratio):
 
 
 if __name__ == '__main__':
-    sample_dataset("YoukuDataset/image/train", "YoukuDataset/sample/train", 0.05)
-    sample_dataset("YoukuDataset/image/valid", "YoukuDataset/sample/valid", 0.05)
+    # sample_dataset("YoukuDataset/image/train", "YoukuDataset/sample/train", 0.05)
+    sample_dataset("YoukuDataset/image2/valid", "YoukuDataset/sample3/valid", 0.1)
 

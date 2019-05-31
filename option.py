@@ -154,8 +154,10 @@ parser.add_argument('--ms_patience', type=int, default=10,
                     help='MultiStepLR patience')
 parser.add_argument('--res_scale_factor', type=float, default=0.6,
                     help='the decrease factor of res_scale')
-parser.add_argument('--n_rirblocks', type=int, default=5,
+parser.add_argument('--n_rirblocks', type=int, default=1,
                     help='the number of RIR blocks')
+parser.add_argument('--n_dedsrblocks', type=int, default=1,
+                    help='the number of DEDSR blocks')
 # parser.add_argument('--ewc', type=bool, default=False,
 #                     help='end with conv: whether MRIRSR has a conv before subpixel layer')
 parser.add_argument('--cwo', type=bool, default=False,
