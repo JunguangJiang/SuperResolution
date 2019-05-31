@@ -2,6 +2,7 @@ from model import common
 
 import torch.nn as nn
 from model import layer
+from model.layer import deconv_block, LinearUpsampler
 
 url = {
     'r16f64x2': 'https://cv.snu.ac.kr/research/EDSR/models/edsr_baseline_x2-1bc95232.pt',
@@ -43,15 +44,13 @@ class EDSR(nn.Module):
         m_body.append(conv(n_feats, n_feats, kernel_size))
 
         # define tail module
-        # m_tail = [
-        #     common.Upsampler(conv, scale, n_feats, act=False),
-        #     conv(n_feats, args.n_colors, kernel_size)
-        # ]
+        upsampler = common.Upsampler(conv, scale, n_feats, act=False),
+        cv = conv(n_feats, args.n_colors, kernel_size)
+        m_tail = LinearUpsampler(n_feats, n_feats, args.n_colors, scale, *upsampler, cv, alpha=0.8)
 
         self.head = nn.Sequential(*m_head)
         self.body = nn.Sequential(*m_body)
-        # self.tail = nn.Sequential(*m_tail)
-        self.tail = layer.DeconvBottleneck(n_feats, n_feats, args.n_colors, 8, 8 // scale)
+        self.tail = m_tail
 
     def forward(self, x):
         x = self.sub_mean(x)

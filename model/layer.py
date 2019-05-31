@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 
+from model import common
+
+
 def params(scale):
     return {
         2: (6, 2, 2),
@@ -19,6 +22,25 @@ def deconv_block(in_channels, hidden, zoomout):
 
     return nn.Sequential(deconv, nn.PReLU(hidden))
 
+
+class LinearUpsampler(nn.Module):
+
+    def __init__(self, in_channels, nr, out_channels, zoomout, upsampler, conv, alpha=0.9):
+        super(LinearUpsampler, self).__init__()
+
+        self.deconv_block = deconv_block(in_channels, nr, zoomout)
+        self.upsampler = upsampler
+        self.conv = conv
+        self.alpha = alpha
+
+    def forward(self, x):
+
+        x1 = self.deconv_block(x)
+        x = self.upsampler(x)
+
+        x = (1 - self.alpha) * x1 + self.alpha * x
+        x = self.conv(x)
+        return x
 
 class DeconvBottleneck(nn.Module):
 
